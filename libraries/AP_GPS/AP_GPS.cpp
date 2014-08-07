@@ -119,6 +119,11 @@ void AP_GPS::send_blob_update(uint8_t instance)
     }
 }
 
+//static int bailCounter = 0;
+//static int readCounter = 0;
+//static char nmeaString[] = "$GPGGA,220056.00,8837.8299,S,9000.0000,E,3,04,0.0,-6357740.4,M,0.0,M,0.0,0000*70\n$GPGSA,A,3,00,00,00,00,00,00,00,00,00,00,00,00,0.0,0.0,0.0*32\n$GPGSV,1,1,04,00,00,000,00,00,00,000,00,00,00,000,00,00,00,000,00*7d\n$GPRMC,220056.00,A,8837.8299,S,9000.0000,E,0.0,0.0,270714,0.0,E,A*1b\n$GPVTG,0.0,T,0.0,M,0.0,N,0.0,K*4e\n";
+//static int nmeaStringLength = 315;
+
 /*
   run detection step for one GPS instance. If this finds a GPS then it
   will fill in drivers[instance] and change state[instance].status
@@ -161,8 +166,17 @@ AP_GPS::detect_instance(uint8_t instance)
 
     send_blob_update(instance);
 
+/*
+    bailCounter = 0;
+    while (bailCounter++ < 2000 && new_gps == NULL) {
+        readCounter++;
+        readCounter %= nmeaStringLength;
+        uint8_t data = nmeaString[readCounter];
+*/
+
     while (port->available() > 0 && new_gps == NULL) {
         uint8_t data = port->read();
+       
         /*
           running a uBlox at less than 38400 will lead to packet
           corruption, as we can't receive the packets in the 200ms
@@ -205,7 +219,7 @@ AP_GPS::detect_instance(uint8_t instance)
 			// a MTK or UBLOX which has booted in NMEA mode
 			if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_NMEA) &&
                 AP_GPS_NMEA::_detect(dstate->nmea_detect_state, data)) {
-				hal.console->print_P(PSTR(" NMEA "));
+				hal.console->print_P(PSTR("*** NMEA GPS detected ***"));
 				new_gps = new AP_GPS_NMEA(*this, state[instance], port);
 			}
 		}
