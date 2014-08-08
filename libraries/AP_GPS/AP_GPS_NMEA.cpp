@@ -107,10 +107,27 @@ AP_GPS_NMEA::AP_GPS_NMEA(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDr
     gps.send_blob_start(state.instance, _initialisation_blob, sizeof(_initialisation_blob));
 }
 
+
+//static int nmeaReadPosCounter = 0;
+//static char nmeaReadNmeaString[] = "$GPGGA,185338.85,6006.1617,N,1956.0986,E,3,04,0.0,1.0,M,0.0,M,0.0,0000*41\n$GPGSA,A,3,00,00,00,00,00,00,00,00,00,00,00,00,0.0,0.0,0.0*32\n$GPGSV,1,1,04,00,00,000,00,00,00,000,00,00,00,000,00,00,00,000,00*7d\n$GPRMC,185338.85,A,6006.1617,N,1956.0986,E,0.0,0.0,070814,0.0,E,A*0b\n$GPVTG,0.0,T,0.0,M,0.0,N,0.0,K*4e\n";
+//static int nmeaReadNmeaStringLength = 308;
+
 bool AP_GPS_NMEA::read(void)
 {
     int16_t numc;
     bool parsed = false;
+/*
+    numc = 10;
+    while (numc--) 
+    {
+        nmeaReadPosCounter++;
+        nmeaReadPosCounter %= nmeaReadNmeaStringLength;
+        if (_decode(nmeaReadNmeaString[nmeaReadPosCounter])) 
+        {
+            parsed = true;
+        }
+    }
+*/
 
     numc = port->available();
     while (numc--) {
@@ -118,6 +135,7 @@ bool AP_GPS_NMEA::read(void)
             parsed = true;
         }
     }
+
     return parsed;
 }
 
