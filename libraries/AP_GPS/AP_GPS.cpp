@@ -81,7 +81,7 @@ void AP_GPS::init(DataFlash_Class *dataflash)
 }
 
 // baudrates to try to detect GPSes with
-const uint32_t AP_GPS::_baudrates[] PROGMEM = {4800U, 38400U, 115200U, 57600U, 9600U};
+const uint32_t AP_GPS::_baudrates[] PROGMEM = {57600U, 4800U, 38400U, 115200U, 9600U};
 
 // initialisation blobs to send to the GPS to try to get it into the
 // right mode
