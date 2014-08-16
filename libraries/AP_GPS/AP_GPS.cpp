@@ -81,7 +81,7 @@ void AP_GPS::init(DataFlash_Class *dataflash)
 }
 
 // baudrates to try to detect GPSes with
-const uint32_t AP_GPS::_baudrates[] PROGMEM = {57600U, 4800U, 38400U, 115200U, 9600U};
+const uint32_t AP_GPS::_baudrates[] PROGMEM = {4800U, 38400U, 57600U, 115200U, 9600U};
 
 // initialisation blobs to send to the GPS to try to get it into the
 // right mode
@@ -119,10 +119,10 @@ void AP_GPS::send_blob_update(uint8_t instance)
     }
 }
 
-//static int bailCounter = 0;
-//static int readCounter = 0;
-//static char nmeaString[] = "$GPGGA,220056.00,8837.8299,S,9000.0000,E,3,04,0.0,-6357740.4,M,0.0,M,0.0,0000*70\n$GPGSA,A,3,00,00,00,00,00,00,00,00,00,00,00,00,0.0,0.0,0.0*32\n$GPGSV,1,1,04,00,00,000,00,00,00,000,00,00,00,000,00,00,00,000,00*7d\n$GPRMC,220056.00,A,8837.8299,S,9000.0000,E,0.0,0.0,270714,0.0,E,A*1b\n$GPVTG,0.0,T,0.0,M,0.0,N,0.0,K*4e\n";
-//static int nmeaStringLength = 315;
+static int bailCounter = 0;
+static int readCounter = 0;
+static char nmeaString[] = "$GPGGA,220056.00,8837.8299,S,9000.0000,E,3,04,0.0,-6357740.4,M,0.0,M,0.0,0000*70\n$GPGSA,A,3,00,00,00,00,00,00,00,00,00,00,00,00,0.0,0.0,0.0*32\n$GPGSV,1,1,04,00,00,000,00,00,00,000,00,00,00,000,00,00,00,000,00*7d\n$GPRMC,220056.00,A,8837.8299,S,9000.0000,E,0.0,0.0,270714,0.0,E,A*1b\n$GPVTG,0.0,T,0.0,M,0.0,N,0.0,K*4e\n";
+static int nmeaStringLength = 315;
 
 /*
   run detection step for one GPS instance. If this finds a GPS then it
@@ -166,18 +166,44 @@ AP_GPS::detect_instance(uint8_t instance)
 
     send_blob_update(instance);
 
-/*
+
+    hal.console->print_P(PSTR("\n\n ** Before Loop **\n\n"));
+
     bailCounter = 0;
-    while (bailCounter++ < 2000 && new_gps == NULL) {
+    while (bailCounter++ < 1000 && new_gps == NULL) {
         readCounter++;
         readCounter %= nmeaStringLength;
         uint8_t data = nmeaString[readCounter];
-*/
+        uint8_t dataClear = port->read();
 
+        hal.console->print_P(PSTR("."));
 
+//if( _type[instance] == GPS_TYPE_UBLOX ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_UBLOX --")); } 
+//if( _type[instance] == GPS_TYPE_MTK19 ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_MTK19 --")); } 
+//if( _type[instance] == GPS_TYPE_MTK ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_MTK --")); } 
+//if( _type[instance] == GPS_TYPE_SBP ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_SBP --")); } 
+//if( _type[instance] == GPS_TYPE_SIRF ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_SIRF --")); } 
+//if( _type[instance] == GPS_TYPE_NMEA ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_NMEA --")); } 
+//if( _type[instance] == GPS_TYPE_AUTO ) { hal.console->print_P(PSTR("--_type[instance] == GPS_TYPE_AUTO --")); } 
+
+   //_baudrates[dstate->last_baud] 
+/*
     while (port->available() > 0 && new_gps == NULL) {
         uint8_t data = port->read();
        
+*/
+
+/*
+        // TEMP
+        if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_NMEA) &&
+            AP_GPS_NMEA::_detect(dstate->nmea_detect_state, data)) {
+            hal.console->print_P(PSTR("*** NMEA GPS detected ***"));
+            new_gps = new AP_GPS_NMEA(*this, state[instance], port);
+        }
+        // TEMP
+*/        
+        
+
         /*
           running a uBlox at less than 38400 will lead to packet
           corruption, as we can't receive the packets in the 200ms
@@ -185,11 +211,14 @@ AP_GPS::detect_instance(uint8_t instance)
           the uBlox into 38400 no matter what rate it is configured
           for.
         */
+
+
+
         if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_UBLOX) &&
             pgm_read_dword(&_baudrates[dstate->last_baud]) >= 38400 && 
             AP_GPS_UBLOX::_detect(dstate->ublox_detect_state, data)) {
-            hal.console->print_P(PSTR(" ublox "));
-            new_gps = new AP_GPS_UBLOX(*this, state[instance], port);
+ //           hal.console->print_P(PSTR(" ublox "));
+ //           new_gps = new AP_GPS_UBLOX(*this, state[instance], port);
         } 
 		else if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_MTK19) &&
                  AP_GPS_MTK19::_detect(dstate->mtk19_detect_state, data)) {
@@ -216,21 +245,28 @@ AP_GPS::detect_instance(uint8_t instance)
 			new_gps = new AP_GPS_SIRF(*this, state[instance], port);
 		}
 		else if (now - dstate->detect_started_ms > 5000) {
+
+            hal.console->print_P(PSTR("@"));
+
 			// prevent false detection of NMEA mode in
 			// a MTK or UBLOX which has booted in NMEA mode
 			if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_NMEA) &&
                 AP_GPS_NMEA::_detect(dstate->nmea_detect_state, data)) {
-				hal.console->print_P(PSTR("*** NMEA GPS detected ***"));
+				hal.console->print_P(PSTR("\n\n*** NMEA GPS detected ***\n\n"));
 				new_gps = new AP_GPS_NMEA(*this, state[instance], port);
 			}
 		}
 #endif
+
+
 	}
 
 	if (new_gps != NULL) {
         state[instance].status = NO_FIX;
         drivers[instance] = new_gps;
         timing[instance].last_message_time_ms = now;
+
+        hal.console->print_P(PSTR("\n*** new_gps != NULL, setting the APM to use this GPS now ***\n"));
 	}
 }
 
@@ -295,6 +331,9 @@ AP_GPS::update_instance(uint8_t instance)
         return;
     }
     if (_type[instance] == GPS_TYPE_NONE) {
+
+        hal.console->print_P(PSTR("\n*** _type[instance] == GPS_TYPE_NONE ***\n"));
+
         // not enabled
         state[instance].status = NO_GPS;
         return;
@@ -326,7 +365,10 @@ AP_GPS::update_instance(uint8_t instance)
     // has expired, re-initialise the GPS. This will cause GPS
     // detection to run again
     if (!result) {
-        if (tnow - timing[instance].last_message_time_ms > 1200) {
+        if (tnow - timing[instance].last_message_time_ms > 1200) { // Andreas: I'm increasing this timer, used to be 1200
+
+            hal.console->print_P(PSTR("\n*** We haven't had a message for too long re-detecting GPS ***\n"));
+
             // free the driver before we run the next detection, so we
             // don't end up with two allocated at any time
             delete drivers[instance];
