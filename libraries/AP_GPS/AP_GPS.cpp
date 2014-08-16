@@ -308,9 +308,9 @@ AP_GPS::update_instance(uint8_t instance)
         // we don't yet know the GPS type of this one, or it has timed
         // out and needs to be re-initialised
 
-hal.console->print_P(PSTR(" *** Need to detect GPS *** "));
-if( drivers[instance] == NULL ) { hal.console->print_P(PSTR(" *** drivers[instance] == NULL *** ")); }
-if( state[instance].status == NO_GPS ) { hal.console->print_P(PSTR(" *** state[instance].status == NO_GPS *** ")); }
+//hal.console->print_P(PSTR(" *** Need to detect GPS *** "));
+//if( drivers[instance] == NULL ) { hal.console->print_P(PSTR(" *** drivers[instance] == NULL *** ")); }
+//if( state[instance].status == NO_GPS ) { hal.console->print_P(PSTR(" *** state[instance].status == NO_GPS *** ")); }
 
         detect_instance(instance);
         return;
