@@ -105,6 +105,8 @@ AP_GPS_NMEA::AP_GPS_NMEA(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDr
     _gps_data_good(false)
 {
     gps.send_blob_start(state.instance, _initialisation_blob, sizeof(_initialisation_blob));
+
+    hal.console->print_P(PSTR("\n\n*** GPS NMEA constructor ***\n\n"));    
 }
 
 
@@ -114,8 +116,12 @@ AP_GPS_NMEA::AP_GPS_NMEA(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDr
 
 bool AP_GPS_NMEA::read(void)
 {
+
+    //hal.console->print_P(PSTR("r"));   
+
     int16_t numc;
     bool parsed = false;
+
 /*
     numc = 10;
     while (numc--) 
@@ -127,10 +133,14 @@ bool AP_GPS_NMEA::read(void)
             parsed = true;
         }
     }
+
+    numc = port->available();
+    while (numc--) { char tmpClear = port->read();}
 */
 
     numc = port->available();
     while (numc--) {
+
         if (_decode(port->read())) {
             parsed = true;
         }
@@ -139,8 +149,14 @@ bool AP_GPS_NMEA::read(void)
     return parsed;
 }
 
+
 bool AP_GPS_NMEA::_decode(char c)
 {
+
+// hal.console->print_P(PSTR("."));   
+ //hal.console->printf (".%c.", c );   
+// hal.console->print_P(PSTR("."));   
+
     bool valid_sentence = false;
 
     switch (c) {
@@ -271,6 +287,9 @@ bool AP_GPS_NMEA::_term_complete()
                     // To-Do: add support for proper reporting of 2D and 3D fix
                     state.status           = AP_GPS::GPS_OK_FIX_3D;
                     fill_3d_velocity();
+
+                    //hal.console->print_P(PSTR("\n*_GPS_SENTENCE_GPRMC*\n"));
+
                     break;
                 case _GPS_SENTENCE_GPGGA:
                     state.location.alt  = _new_altitude;
@@ -280,11 +299,17 @@ bool AP_GPS_NMEA::_term_complete()
                     state.hdop          = _new_hdop;
                     // To-Do: add support for proper reporting of 2D and 3D fix
                     state.status        = AP_GPS::GPS_OK_FIX_3D;
+
+                    //hal.console->print_P(PSTR("\n*_GPS_SENTENCE_GPGGA*\n"));
+
                     break;
                 case _GPS_SENTENCE_GPVTG:
                     state.ground_speed     = _new_speed*0.01f;
                     state.ground_course_cd = _new_course;
                     // VTG has no fix indicator, can't change fix status
+
+                    //hal.console->print_P(PSTR("\n*_GPS_SENTENCE_GPVTG*\n"));   
+
                     break;
                 }
             } else {

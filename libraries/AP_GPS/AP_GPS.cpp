@@ -81,7 +81,8 @@ void AP_GPS::init(DataFlash_Class *dataflash)
 }
 
 // baudrates to try to detect GPSes with
-const uint32_t AP_GPS::_baudrates[] PROGMEM = {4800U, 38400U, 115200U, 57600U, 9600U};
+//const uint32_t AP_GPS::_baudrates[] PROGMEM = {4800U, 38400U, 115200U, 57600U, 9600U};
+const uint32_t AP_GPS::_baudrates[] PROGMEM = {4800UL, 38400UL, 115200UL, 57600UL, 9600UL};
 
 // initialisation blobs to send to the GPS to try to get it into the
 // right mode
@@ -141,6 +142,8 @@ AP_GPS::detect_instance(uint8_t instance)
         return;
     }
 
+    //hal.console->print_P(PSTR("*D*"));   
+
     uint32_t now = hal.scheduler->millis();
 
     state[instance].instance = instance;
@@ -152,14 +155,21 @@ AP_GPS::detect_instance(uint8_t instance)
         dstate->detect_started_ms = now;
     }
 
-    if (now - dstate->last_baud_change_ms > 1200) {
+    if (now - dstate->last_baud_change_ms > 1200 * 3) {
         // try the next baud rate
 		dstate->last_baud++;
 		if (dstate->last_baud == sizeof(_baudrates) / sizeof(_baudrates[0])) {
 			dstate->last_baud = 0;
 		}
 		uint32_t baudrate = pgm_read_dword(&_baudrates[dstate->last_baud]);
+
+        //
+        hal.console->printf ("\nOpening port at baud %u\n", baudrate );   
+        //
+
 		port->begin(baudrate, 256, 16);		
+
+
 		dstate->last_baud_change_ms = now;
         send_blob_start(instance, _initialisation_blob, sizeof(_initialisation_blob));
     }
@@ -172,12 +182,14 @@ AP_GPS::detect_instance(uint8_t instance)
         readCounter++;
         readCounter %= nmeaStringLength;
         uint8_t data = nmeaString[readCounter];
+        uint8_t dataClear = port->read();
 */
-
 
     while (port->available() > 0 && new_gps == NULL) {
         uint8_t data = port->read();
-       
+      
+        //hal.console->print_P(PSTR("d"));   
+
         /*
           running a uBlox at less than 38400 will lead to packet
           corruption, as we can't receive the packets in the 200ms
@@ -188,8 +200,8 @@ AP_GPS::detect_instance(uint8_t instance)
         if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_UBLOX) &&
             pgm_read_dword(&_baudrates[dstate->last_baud]) >= 38400 && 
             AP_GPS_UBLOX::_detect(dstate->ublox_detect_state, data)) {
-            hal.console->print_P(PSTR(" ublox "));
-            new_gps = new AP_GPS_UBLOX(*this, state[instance], port);
+//            hal.console->print_P(PSTR(" ublox "));
+//            new_gps = new AP_GPS_UBLOX(*this, state[instance], port);
         } 
 		else if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_MTK19) &&
                  AP_GPS_MTK19::_detect(dstate->mtk19_detect_state, data)) {
@@ -220,7 +232,7 @@ AP_GPS::detect_instance(uint8_t instance)
 			// a MTK or UBLOX which has booted in NMEA mode
 			if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_NMEA) &&
                 AP_GPS_NMEA::_detect(dstate->nmea_detect_state, data)) {
-				hal.console->print_P(PSTR("*** NMEA GPS detected ***"));
+				hal.console->print_P(PSTR("\n\n*** NMEA GPS detected ***\n\n"));
 				new_gps = new AP_GPS_NMEA(*this, state[instance], port);
 			}
 		}
@@ -231,6 +243,8 @@ AP_GPS::detect_instance(uint8_t instance)
         state[instance].status = NO_FIX;
         drivers[instance] = new_gps;
         timing[instance].last_message_time_ms = now;
+
+        hal.console->print_P(PSTR("\n\n*** Setting the GPS obj to the new one we created ***\n\n"));
 	}
 }
 
@@ -290,6 +304,9 @@ AP_GPS::highest_supported_status(void) const
 void
 AP_GPS::update_instance(uint8_t instance)
 {
+
+    //hal.console->print_P(PSTR("U"));   
+
     if (_type[instance] == GPS_TYPE_HIL) {
         // in HIL, leave info alone
         return;
@@ -318,6 +335,8 @@ AP_GPS::update_instance(uint8_t instance)
 
     send_blob_update(instance);
 
+    //hal.console->print_P(PSTR("u"));   
+
     // we have an active driver for this instance
     bool result = drivers[instance]->read();
     uint32_t tnow = hal.scheduler->millis();
@@ -326,7 +345,9 @@ AP_GPS::update_instance(uint8_t instance)
     // has expired, re-initialise the GPS. This will cause GPS
     // detection to run again
     if (!result) {
-        if (tnow - timing[instance].last_message_time_ms > 1200) {
+        if (tnow - timing[instance].last_message_time_ms > 1200 ) {
+
+            /*
             // free the driver before we run the next detection, so we
             // don't end up with two allocated at any time
             delete drivers[instance];
@@ -335,6 +356,9 @@ AP_GPS::update_instance(uint8_t instance)
             state[instance].instance = instance;
             state[instance].status = NO_GPS;
             timing[instance].last_message_time_ms = tnow;
+
+            hal.console->print_P(PSTR("\n\n*** Have not gotten GPS data for too long (1200ms), re-detecting. ***\n\n"));
+            */
         }
     } else {
         timing[instance].last_message_time_ms = tnow;
